@@ -1,0 +1,382 @@
+---
+title: "Figures for CEA of DSD manuscript"
+output: html_document
+date: "2023-07-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Figure 1: Incidence, prevalence, mortality, and ART coverage
+```{r func-epi-plots}
+rm(list=ls()) # clear the work space
+
+library(ggplot2)
+library(tidyverse)
+library(gridExtra)
+library(grid)
+library(cowplot)
+
+# plot incidence + prevalence + mortality + ART coverage plot for a single country under four scenarios (SoC, CAG, homeART, UAG)
+# output_width: the width of the output graph
+# output_height: the height of the output graph
+# legend_pos: position of legend
+plot_one_country = function(file_name, country_name, output_width=2.5, output_height=8, legend_pos='none',
+                            col_SoC="#F8766D", col_CAG="#00BFC4", col_HomeART="#619CFF", col_UAG="#C77CFF", 
+                            label_names=c("SoC", "CAGs", "HomeART", "UAGs")){
+  path = paste0("Figure1/", file_name)
+  df <- read.csv(path)
+  
+  # Reshape to long format
+  df_inci <- df %>%
+    pivot_longer(cols = starts_with("inci_"), names_to = "DSDModality", values_to = "Incidence") %>%
+    select(Year, DSDModality, Incidence)
+  df_prev <- df %>%
+    pivot_longer(cols = starts_with("prev_"), names_to = "DSDModality", values_to = "Prevalence") %>%
+    select(Year, DSDModality, Prevalence)
+  df_mort <- df %>%
+    pivot_longer(cols = starts_with("mort_"), names_to = "DSDModality", values_to = "Mortality") %>%
+    select(Year, DSDModality, Mortality)
+  df_art <- df %>%
+    pivot_longer(cols = starts_with("art_"), names_to = "DSDModality", values_to = "ARTCov") %>%
+    select(Year, DSDModality, ARTCov)
+  
+  # Incidence
+  plot1=ggplot(df_inci, aes(x = Year, y = Incidence, color = DSDModality)) +
+  geom_line() +
+  labs(x = "Year", y = "Incidence/100PY", title = "Incidence") +
+  scale_color_manual(values = c("inci_00" = col_SoC, "inci_25" = col_CAG, "inci_38" = col_HomeART, "inci_50" = col_UAG),
+                     labels = label_names) +
+    ylim(0, 2) + theme_minimal() +
+    theme(legend.position = legend_pos, plot.title = element_text(size = 9), axis.title = element_text(size = 7))
+  
+  # Prevalence
+  plot2=ggplot(df_prev, aes(x = Year, y = Prevalence, color = DSDModality)) +
+  geom_line() +
+  labs(x = "Year", y = "Prevalence", title = "Prevalence") +
+  scale_color_manual(values = c("prev_00" = col_SoC, "prev_25" = col_CAG, "prev_38" = col_HomeART, "prev_50" = col_UAG),
+                     labels = label_names) +
+    scale_y_continuous(limits = c(0, 0.18)) + theme_minimal()+
+    theme(legend.position = legend_pos, plot.title = element_text(size = 9), axis.title = element_text(size = 7))
+  
+  # Mortality
+  plot3=ggplot(df_mort, aes(x = Year, y = Mortality, color = DSDModality)) +
+  geom_line() +
+  labs(x = "Year", y = "Mortality/1000 PLHIV", title = "Mortality among PLHIV") +
+  scale_color_manual(values = c("mort_00" = col_SoC, "mort_25" = col_CAG, "mort_38" = col_HomeART, "mort_50" = col_UAG),
+                     labels = label_names) +
+    scale_y_continuous(limits = c(0, 80)) + theme_minimal() +
+    theme(legend.position = legend_pos, plot.title = element_text(size = 9), axis.title = element_text(size = 7))
+  
+  # ART coverage
+  plot4=ggplot(df_art, aes(x = Year, y = ARTCov, color = DSDModality)) +
+  geom_line() +
+  labs(x = "Year", y = "ARTCov", title = "ART coverage among PLHIV") +
+  scale_color_manual(values = c("art_00" = col_SoC, "art_25" = col_CAG, "art_38" = col_HomeART, "art_50" = col_UAG),
+                     labels = label_names) +
+    ylim(0, 1) + theme_minimal() +
+    theme(legend.position = legend_pos, plot.title = element_text(size = 9), axis.title = element_text(size = 7))
+  
+  grid.arrange(plot1, plot2, plot3, plot4, nrow=4, top = textGrob(country_name, gp=gpar(fontsize=10,font=2)))
+  # ggsave(file=paste0("Figure1_EpiStates/", Sys.Date(), "-", country_name, ".png"), g, width = output_width, height = output_height) 
+}
+
+### PLOT
+# legend position: right, left, top, bottom, none (default).
+epi_lmic=plot_one_country(file_name = "LMIC.csv", country_name = "LMICs", legend_pos = "right", output_width = 3.8, output_height=8)
+epi_sa=plot_one_country(file_name = "SA.csv", country_name = "South Africa")
+epi_zambia=plot_one_country(file_name = "Zambia.csv", country_name = "Zambia")
+epi_malawi=plot_one_country(file_name = "Malawi.csv", country_name = "Malawi")
+
+# combine all plots and create common legend
+grid.arrange(epi_sa, epi_zambia ,epi_malawi, epi_lmic, 
+             layout_matrix=rbind(c(1,1,2,2,3,3,4,4,4)))
+g <- arrangeGrob(epi_sa, epi_zambia ,epi_malawi, epi_lmic,
+             layout_matrix=rbind(c(1,1,2,2,3,3,4,4,4)),
+             top = textGrob("", gp=gpar(fontsize=16,font=2)))
+ggsave(file=paste0("Figure1/", Sys.Date(), "-graph1", ".png"), g, width = 10, height =6) #saves g
+```
+
+# Figure 2: ICERs for DSD vs. SOC (sim-length=40 years)
+### v1: by country
+```{r setup_and_read_files}
+rm(list=ls()) # clear the work space
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(cowplot)
+
+# setup working directory
+path <- getwd() # Retrieve the current folder path
+
+# Read in files
+malawi <- read.csv(paste0(path, "/Figure2/Malawi.csv"))
+zambia <- read.csv(paste0(path, "/Figure2/Zambia.csv"))
+sa <- read.csv(paste0(path, "/Figure2/SouthAfrica.csv"))
+LMICs <- read.csv(paste0(path, "/Figure2/Synthesis.csv"))
+```
+
+```{r icer-plot-function}
+# Country specific incremental cost and effectiveness plane
+# WTP1 & WTP2: willingness-to-pay thresholds
+plot_country_icer <- function(df, country_name, WTP1=500, WTP2=750, 
+                              col_CAG = "#00BFC4", col_HomeART="#C77CFF", col_UAG = "#619CFF", col_WTP = "grey", col_baseline="black",
+                              output_width=7, output_height=5, legend_position="none", xlim, ylim){
+  icer.plot <- ggplot() +
+  labs(y = "Incremental costs", x = "Incremental DALYs", title = country_name) + 
+    theme_minimal() +
+  coord_cartesian(xlim = c(0, xlim), ylim = c(0, ylim))
+  
+  icer.plot <- icer.plot +
+    # CAG vs. SOC
+    geom_point(data = df, aes(y = Diff_cpoint_cag_soc, x = Diff_dalys_cag_soc, color = "CAG"), alpha = 0.15, size = 1) + 
+    geom_point(data = df, aes(y = median(Diff_cpoint_cag_soc), x = median(Diff_dalys_cag_soc), color = "CAG"), size = 4, shape = 18) +
+    # UAG vs. SoC
+    geom_point(data = df, aes(y = Diff_cpoint_uag_soc, x = Diff_dalys_uag_soc, color = "UAG"), alpha = 0.15, size = 1) + 
+    geom_point(data = df, aes(y = median(Diff_cpoint_uag_soc), x = median(Diff_dalys_uag_soc), color = "UAG"), size = 4, shape = 18) +
+    # Home ART vs. SoC
+    geom_point(data = df, aes(y = Diff_cpoint_hom_soc, x = Diff_dalys_hom_soc, color = "HomeART"), alpha = 0.15, size = 1) + 
+    geom_point(data = df, aes(y = median(Diff_cpoint_hom_soc), x = median(Diff_dalys_hom_soc), color = "HomeART"), size = 4, shape = 18) +
+    # WTP lines
+    geom_abline(slope = WTP1, intercept = 0, color = col_WTP, linetype = "dashed", alpha = 0.7) + 
+    geom_abline(slope = WTP2, intercept = 0, color = col_WTP, linetype = "dashed", alpha = 0.7) +
+    # baesline: y=0
+    geom_hline(yintercept = WTP1, linetype = "dotted", color = col_baseline, linewidth=0.3)
+  
+  # add legend based on color
+  icer.plot <- icer.plot +
+    scale_color_manual(values = c(col_CAG, col_HomeART, col_UAG), guide = guide_legend(title = "DSD (vs. SoC)")) +
+    theme_bw() + 
+    theme(legend.position = legend_position,
+          panel.grid = element_blank()) # remove grid
+  # ggsave(file=paste0("Figure2/", Sys.Date(), "-", country_name, "_ICERs.png"), icer.plot, width = output_width, height = output_height)
+}
+
+```
+
+```{r fig2-separate-plots}
+icer_sa = plot_country_icer(df = sa, country_name = "SouthAfrica", WTP1=590, WTP2=3525, xlim=27000000, ylim=28000000000)
+icer_zambia = plot_country_icer(df = zambia, country_name = "Zambia", xlim=6500000, ylim=4300000000)
+icer_malawi = plot_country_icer(df = malawi, country_name = "Malawi", xlim=4000000, ylim=3000000000)
+icer_lmic = plot_country_icer(df = LMICs, country_name = "LMICs", xlim=2500000, ylim=2000000000)
+
+# get common legend
+legend <- get_legend(plot_country_icer(df = malawi, country_name = "Malawi", output_width=7, output_height=5, legend_position="right", xlim=4, ylim=4))
+# combine all plots and create common legend
+grid.arrange(icer_sa, icer_zambia ,icer_malawi, icer_lmic, legend, 
+             layout_matrix=rbind(c(1,1,2,2,5), c(3,3,4,4,5)))
+g <- arrangeGrob(icer_sa, icer_zambia ,icer_malawi, icer_lmic, legend,
+             layout_matrix=rbind(c(1,1,2,2,5), c(3,3,4,4,5)),
+             top = textGrob("ICERs of DSD compared to SoC", gp=gpar(fontsize=16,font=2)))
+ggsave(file=paste0("Figure2/", Sys.Date(), "-graph2-byCountry", ".png"), g, width = 9, height =6) #saves g
+```
+
+### v2: consolidate
+```{r read_dataframes}
+rm(list=ls()) # clear the work space
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(cowplot)
+
+# setup working directory
+path <- getwd() # Retrieve the current folder path
+
+# Read in files
+malawi <- read.csv(paste0(path, "/Figure2/Malawi.csv"))
+zambia <- read.csv(paste0(path, "/Figure2/Zambia.csv"))
+sa <- read.csv(paste0(path, "/Figure2/SouthAfrica.csv"))
+LMICs <- read.csv(paste0(path, "/Figure2/Synthesis.csv"))
+```
+
+```{r fig2-all-in-one}
+# ggplot point shape: http://www.sthda.com/english/wiki/ggplot2-point-shapes
+WTP1 = 500
+WTP2 = 750
+sa_WTP1 = 590
+sa_WTP2 = 3525
+ALPHA = 0.1 # opacity
+malawi_shape = 18
+zambia_shape = 18
+sa_shape = 18
+lmic_shape = 18
+
+icer.plot <- ggplot() +
+  labs(y = "Incremental costs", x = "Incremental DALYs", title = "ICERs of DSD compared to SoC") + 
+    theme_minimal()
+
+# (another way is to first convert the data to long-format, and simplify code block below (as figure 3 v1))
+# Malawi: CAG, UAG, HomeART
+icer.plot <- icer.plot + 
+  geom_point(data = malawi, aes(y = Diff_cpoint_cag_soc, x = Diff_dalys_cag_soc, color = "Malawi-CAG"), alpha = ALPHA, size = 1) + 
+  geom_point(data = malawi, aes(y = median(Diff_cpoint_cag_soc), x = median(Diff_dalys_cag_soc), color = "Malawi-CAG"), size = 4, shape = malawi_shape) +
+  geom_point(data = malawi, aes(y = Diff_cpoint_uag_soc, x = Diff_dalys_uag_soc, color = "Malawi-UAG"), alpha = ALPHA, size = 1) + 
+  geom_point(data = malawi, aes(y = median(Diff_cpoint_uag_soc), x = median(Diff_dalys_uag_soc), color = "Malawi-UAG"), size = 4, shape = malawi_shape) +
+  geom_point(data = malawi, aes(y = Diff_cpoint_hom_soc, x = Diff_dalys_hom_soc, color = "Malawi-HomeART"), alpha = ALPHA, size = 1) + 
+  geom_point(data = malawi, aes(y = median(Diff_cpoint_hom_soc), x = median(Diff_dalys_hom_soc), color = "Malawi-HomeART"), size = 4, shape = malawi_shape) +
+  
+# Zambia: CAG, UAG, HomeART
+geom_point(data = zambia, aes(y = Diff_cpoint_cag_soc, x = Diff_dalys_cag_soc, color = "Zambia-CAG"), alpha = ALPHA, size = 1) +
+  geom_point(data = zambia, aes(y = median(Diff_cpoint_cag_soc), x = median(Diff_dalys_cag_soc), color = "Zambia-CAG"), size = 4, shape = zambia_shape) +
+  geom_point(data = zambia, aes(y = Diff_cpoint_uag_soc, x = Diff_dalys_uag_soc, color = "Zambia-UAG"), alpha = ALPHA, size = 1) +
+  geom_point(data = zambia, aes(y = median(Diff_cpoint_uag_soc), x = median(Diff_dalys_uag_soc), color = "Zambia-UAG"), size = 4, shape = zambia_shape) +
+  geom_point(data = zambia, aes(y = Diff_cpoint_hom_soc, x = Diff_dalys_hom_soc, color = "Zambia-HomeART"), alpha = ALPHA, size = 1) +
+  geom_point(data = zambia, aes(y = median(Diff_cpoint_hom_soc), x = median(Diff_dalys_hom_soc), color = "Zambia-HomeART"), size = 4, shape = zambia_shape) +
+
+# SA: CAG, UAG, HomeART
+geom_point(data = sa, aes(y = Diff_cpoint_cag_soc, x = Diff_dalys_cag_soc, color = "SouthAfrica-CAG"), alpha = ALPHA, size = 1) +
+  geom_point(data = sa, aes(y = median(Diff_cpoint_cag_soc), x = median(Diff_dalys_cag_soc), color = "SouthAfrica-CAG"), size = 4, shape = sa_shape) +
+  geom_point(data = sa, aes(y = Diff_cpoint_uag_soc, x = Diff_dalys_uag_soc, color = "SouthAfrica-UAG"), alpha = ALPHA, size = 1) +
+  geom_point(data = sa, aes(y = median(Diff_cpoint_uag_soc), x = median(Diff_dalys_uag_soc), color = "SouthAfrica-UAG"), size = 4, shape = sa_shape) +
+  geom_point(data = sa, aes(y = Diff_cpoint_hom_soc, x = Diff_dalys_hom_soc, color = "SouthAfrica-HomeART"), alpha = ALPHA, size = 1) +
+  geom_point(data = sa, aes(y = median(Diff_cpoint_hom_soc), x = median(Diff_dalys_hom_soc), color = "SouthAfrica-HomeART"), size = 4, shape = sa_shape) +
+
+# Synthesis: CAG, UAG, HomeART
+geom_point(data = LMICs, aes(y = Diff_cpoint_cag_soc, x = Diff_dalys_cag_soc, color = "LMICs-CAG"), alpha = ALPHA, size = 1) + 
+  geom_point(data = LMICs, aes(y = median(Diff_cpoint_cag_soc), x = median(Diff_dalys_cag_soc), color = "LMICs-CAG"), size = 4, shape = lmic_shape) +
+  geom_point(data = LMICs, aes(y = Diff_cpoint_uag_soc, x = Diff_dalys_uag_soc, color = "LMICs-UAG"), alpha = ALPHA, size = 1) + 
+  geom_point(data = LMICs, aes(y = median(Diff_cpoint_uag_soc), x = median(Diff_dalys_uag_soc), color = "LMICs-UAG"), size = 4, shape = lmic_shape) +
+  geom_point(data = LMICs, aes(y = Diff_cpoint_hom_soc, x = Diff_dalys_hom_soc, color = "LMICs-HomeART"), alpha = ALPHA, size = 1) + 
+  geom_point(data = LMICs, aes(y = median(Diff_cpoint_hom_soc), x = median(Diff_dalys_hom_soc), color = "LMICs-HomeART"), size = 4, shape = lmic_shape) 
+  
+# WPT
+icer.plot <- icer.plot + 
+  # WTP for SA
+  geom_abline(slope = sa_WTP1, intercept = 0, color = "grey", linetype = "dashed", alpha = 0.7) + 
+  geom_abline(slope = sa_WTP2, intercept = 0, color = "grey", linetype = "dashed", alpha = 0.7) +
+  # WTP for other countries
+  geom_abline(slope = WTP1, intercept = 0, color = "black", linetype = "dotted", alpha = 0.7) + 
+  geom_abline(slope = WTP2, intercept = 0, color = "black", linetype = "dotted", alpha = 0.7) 
+  
+# color
+icer.plot <- icer.plot + 
+  scale_color_manual(values = c("Malawi-CAG" = "#b6d7a8", "Malawi-UAG" = "#6aa84f", "Malawi-HomeART" = "#8fce00",
+                                "Zimbabwe-CAG" = "#9fc5e8", "Zimbabwe-UAG" = "#3d85c6", "Zimbabwe-HomeART" = "#349cfa",
+                                "LMICs-CAG" = "#d9d2e9", "LMICs-UAG" = "#b8a1fb", "LMICs-HomeART" = "#9974f5",
+                                "Zambia-CAG" = "#f9cb9c", "Zambia-UAG" = "#f6b26b", "Zambia-HomeART" = "#e69138",
+                                "SouthAfrica-CAG" = "#ead1dc", "SouthAfrica-UAG" = "#faa2d0", "SouthAfrica-HomeART" = "#fa7ab9"),
+                     guide = guide_legend(title = "Country-DSD"))
+
+# format
+icer.plot = icer.plot +
+  theme(text = element_text(family = "Times New Roman")) +
+  theme_minimal() + theme_bw() + 
+  theme(panel.grid = element_blank()) # remove grid
+
+ggsave(file=paste0("Figure2/", Sys.Date(), "-graph2-consolidated.png"), icer.plot, width = 7, height =5.25)
+```
+
+# Figure 3: ICER by time horizons
+### v1: consolidated
+```{r fig3-all-in-one}
+rm(list=ls()) # clear the work space
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(cowplot)
+
+# Read in files
+path = getwd()
+df = read.csv(paste0(path, "/Figure3/long_df.csv"))
+
+plot.fig3.allInOne = function(df, filename, 
+                              WTP1 = 500, WTP2 = 750, WTP3 = 590, WTP4 = 3525, 
+                              xlimits=c("5-year", "10-year", "20-year", "30-year", "40-year"), 
+                              width=7, height=6, point_size=1, line_size=0.3) {
+  # line and points
+  fig3 = ggplot(df, aes(TimeHorizon, ICERs, col=Country.DSD, group=Country.DSD)) +
+    geom_point(aes(shape = DSD), size=point_size) +
+    geom_line(aes(linetype = DSD), linewidth=line_size)
+  
+  # WTP thresholds
+  fig3 = fig3 +     
+  geom_hline(yintercept = WTP1, linetype = "dotted", color = "black", linewidth=0.3) +
+  geom_hline(yintercept = WTP2, linetype = "dotted", color = "black", linewidth=0.3) +
+  geom_hline(yintercept = WTP3, linetype = "dotted", color = "grey", linewidth=0.3) +
+  geom_hline(yintercept = WTP4, linetype = "dotted", color = "grey", linewidth=0.3)
+  
+  # format
+  fig3 = fig3 +
+    scale_x_discrete(limits = xlimits) +
+    scale_color_manual(values = c("Malawi-CAG" = "#b6d7a8", "Malawi-UAG" = "#6aa84f", "Malawi-HomeART" = "#8fce00",
+                                  "LMICs-CAG" = "#d9d2e9", "LMICs-UAG" = "#b8a1fb", "LMICs-HomeART" = "#9974f5",
+                                  "Zambia-CAG" = "#f9cb9c", "Zambia-UAG" = "#f6b26b", "Zambia-HomeART" = "#e69138",
+                                  "SouthAfrica-CAG" = "#ead1dc", "SouthAfrica-UAG" = "#faa2d0", "SouthAfrica-HomeART" = "#fa7ab9")) +
+  labs(y = "ICERs", x = "Simulation time horizons", title = "ICERs of DSD compared to SoC by simulation horizons") + 
+  theme_minimal() + theme_bw() +
+  theme(panel.grid = element_blank()) # remove grid
+  
+  # save file 
+  ggsave(file=paste0("Figure3/", Sys.Date(), "-", filename), fig3, width = width, height = height)
+}
+
+# Main Analysis
+plot.fig3.allInOne(df=df, WTP1=0, WTP2=0, WTP3=0, WTP4=0, filename = "graph3-consolidated.png")
+```
+
+### v2: by country
+```{r set-up}
+rm(list=ls()) # clear the work space
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(cowplot)
+
+# Read in files
+path = getwd()
+zambia = read.csv(paste0(path, "/Figure3/long_df-Zambia.csv"))
+sa = read.csv(paste0(path, "/Figure3/long_df-SA.csv"))
+ssa = read.csv(paste0(path, "/Figure3/long_df-SSA.csv"))
+malawi = read.csv(paste0(path, "/Figure3/long_df-Malawi.csv"))
+```
+
+```{r fig3-by_country-func}
+plot.fig3.byCountry = function(df, countryname, WTP1=590, WTP2=3525, width=4, height=5, point_size=1, line_size=0.3, ylim=13000, legend_position="none") {
+  # line and points
+  fig3 = ggplot(df, aes(TimeHorizon, ICERs, color=DSD, group=Country.DSD)) +
+    geom_point(aes(shape = DSD), size=point_size) +
+    geom_line(aes(linetype = DSD), size=line_size)
+  
+  # WTP thresholds
+  # WTP1 = 500, WTP2 = 750, WTP3 = 590, WTP4 = 3525
+  fig3 = fig3 +     
+  geom_hline(yintercept = WTP1, linetype = "dotted", color = "grey", linewidth=0.3) +
+  geom_hline(yintercept = WTP2, linetype = "dotted", color = "grey", linewidth=0.3)
+  
+  # format
+  fig3 = fig3 +
+    scale_x_discrete(limits = c("5-year", "10-year", "20-year", "30-year", "40-year")) +
+    labs(y = "ICERs", x = "Simulation time horizons", title = countryname) + 
+    theme_minimal() +
+    theme_bw() +
+    coord_cartesian(ylim = c(0, ylim)) + 
+    theme(legend.position = legend_position) + 
+    theme(panel.grid = element_blank()) # remove grid
+  
+  # change font size
+  fig3 = fig3 +
+    theme(
+  axis.title = element_text(size = 8),    # Change axis title font size
+  plot.title = element_text(size = 10)     # Change plot title font size
+)
+}
+```
+
+```{r fig3-by_country-plot}
+pzambia = plot.fig3.byCountry(df=zambia, countryname = "Zambia", WTP1=500, WTP2=750) 
+pmalawi = plot.fig3.byCountry(df=malawi, countryname = "Malawi", WTP1=500, WTP2=750) 
+pssa = plot.fig3.byCountry(df=ssa, countryname = "LMICs", WTP1=500, WTP2=750) 
+psa = plot.fig3.byCountry(df=sa, countryname = "SouthAfrica", WTP1=590, WTP2=3525) 
+
+# save file
+legend <- get_legend(plot.fig3.byCountry(df=zambia, countryname = "Zambia", legend_position="right"))
+grid.arrange(psa, pzambia ,pmalawi, pssa, legend, 
+             layout_matrix=rbind(c(1,1,2,2,5), c(3,3,4,4,5)))
+g <- arrangeGrob(psa, pzambia ,pmalawi, pssa, legend,
+             layout_matrix=rbind(c(1,1,2,2,5), c(3,3,4,4,5)),
+             top = textGrob("ICERs by time horizons", gp=gpar(fontsize=16,font=2)))
+ggsave(file=paste0("Figure3/", Sys.Date(), "-graph3-byCountry.png"), g, width = 8, height =6) #saves g
+
+```
+
