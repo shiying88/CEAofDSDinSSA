@@ -4,6 +4,20 @@ output: html_document
 date: "2023-07-14"
 ---
 
+Code of all figures in the CEA of DSD paper
+
+Date last modified: Nov 10.
+
+Content
+
+- Figure 1: Incidence, prevalence, mortality, and ART coverage
+
+- Figure 2: ICERs of DSD vs. SoC (sim length is 40 years)
+
+- Figure 3: ICER of DSD vs. SoC by time horizons
+
+- Figure 4: One-way sensitivity analysis
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -17,7 +31,10 @@ library(tidyverse)
 library(gridExtra)
 library(grid)
 library(cowplot)
+```
 
+### Functions
+```{r}
 # plot incidence + prevalence + mortality + ART coverage plot for a single country under four scenarios (SoC, CAG, homeART, UAG)
 # output_width: the width of the output graph
 # output_height: the height of the output graph
@@ -81,8 +98,10 @@ plot_one_country = function(file_name, country_name, output_width=2.5, output_he
   grid.arrange(plot1, plot2, plot3, plot4, nrow=4, top = textGrob(country_name, gp=gpar(fontsize=10,font=2)))
   # ggsave(file=paste0("Figure1_EpiStates/", Sys.Date(), "-", country_name, ".png"), g, width = output_width, height = output_height) 
 }
+```
 
-### PLOT
+### Plot
+```{r}
 # legend position: right, left, top, bottom, none (default).
 epi_lmic=plot_one_country(file_name = "LMIC.csv", country_name = "LMICs", legend_pos = "right", output_width = 3.8, output_height=8)
 epi_sa=plot_one_country(file_name = "SA.csv", country_name = "South Africa")
@@ -106,17 +125,9 @@ library(ggplot2)
 library(grid)
 library(gridExtra)
 library(cowplot)
-
-# setup working directory
-path <- getwd() # Retrieve the current folder path
-
-# Read in files
-malawi <- read.csv(paste0(path, "/Figure2/Malawi.csv"))
-zambia <- read.csv(paste0(path, "/Figure2/Zambia.csv"))
-sa <- read.csv(paste0(path, "/Figure2/SouthAfrica.csv"))
-LMICs <- read.csv(paste0(path, "/Figure2/Synthesis.csv"))
 ```
 
+##### Functions
 ```{r icer-plot-function}
 # Country specific incremental cost and effectiveness plane
 # WTP1 & WTP2: willingness-to-pay thresholds
@@ -152,10 +163,18 @@ plot_country_icer <- function(df, country_name, WTP1=500, WTP2=750,
           panel.grid = element_blank()) # remove grid
   # ggsave(file=paste0("Figure2/", Sys.Date(), "-", country_name, "_ICERs.png"), icer.plot, width = output_width, height = output_height)
 }
-
 ```
 
+##### Plot
 ```{r fig2-separate-plots}
+# setup working directory
+path <- getwd() # Retrieve the current folder path
+
+# Read in files
+malawi <- read.csv(paste0(path, "/Figure2/Malawi.csv"))
+zambia <- read.csv(paste0(path, "/Figure2/Zambia.csv"))
+sa <- read.csv(paste0(path, "/Figure2/SouthAfrica.csv"))
+LMICs <- read.csv(paste0(path, "/Figure2/Synthesis.csv"))
 icer_sa = plot_country_icer(df = sa, country_name = "SouthAfrica", WTP1=590, WTP2=3525, xlim=27000000, ylim=28000000000)
 icer_zambia = plot_country_icer(df = zambia, country_name = "Zambia", xlim=6500000, ylim=4300000000)
 icer_malawi = plot_country_icer(df = malawi, country_name = "Malawi", xlim=4000000, ylim=3000000000)
@@ -190,6 +209,7 @@ sa <- read.csv(paste0(path, "/Figure2/SouthAfrica.csv"))
 LMICs <- read.csv(paste0(path, "/Figure2/Synthesis.csv"))
 ```
 
+##### Plot
 ```{r fig2-all-in-one}
 # ggplot point shape: http://www.sthda.com/english/wiki/ggplot2-point-shapes
 WTP1 = 500
@@ -275,11 +295,10 @@ library(ggplot2)
 library(grid)
 library(gridExtra)
 library(cowplot)
+```
 
-# Read in files
-path = getwd()
-df = read.csv(paste0(path, "/Figure3/long_df.csv"))
-
+##### Functions
+```{r}
 plot.fig3.allInOne = function(df, filename, 
                               WTP1 = 500, WTP2 = 750, WTP3 = 590, WTP4 = 3525, 
                               xlimits=c("5-year", "10-year", "20-year", "30-year", "40-year"), 
@@ -310,8 +329,12 @@ plot.fig3.allInOne = function(df, filename,
   # save file 
   ggsave(file=paste0("Figure3/", Sys.Date(), "-", filename), fig3, width = width, height = height)
 }
+```
 
-# Main Analysis
+##### Plot
+```{r}
+path = getwd()
+df = read.csv(paste0(path, "/Figure3/long_df.csv"))
 plot.fig3.allInOne(df=df, WTP1=0, WTP2=0, WTP3=0, WTP4=0, filename = "graph3-consolidated.png")
 ```
 
@@ -322,15 +345,9 @@ library(ggplot2)
 library(grid)
 library(gridExtra)
 library(cowplot)
-
-# Read in files
-path = getwd()
-zambia = read.csv(paste0(path, "/Figure3/long_df-Zambia.csv"))
-sa = read.csv(paste0(path, "/Figure3/long_df-SA.csv"))
-ssa = read.csv(paste0(path, "/Figure3/long_df-SSA.csv"))
-malawi = read.csv(paste0(path, "/Figure3/long_df-Malawi.csv"))
 ```
 
+##### Functions
 ```{r fig3-by_country-func}
 plot.fig3.byCountry = function(df, countryname, WTP1=590, WTP2=3525, width=4, height=5, point_size=1, line_size=0.3, ylim=13000, legend_position="none") {
   # line and points
@@ -363,13 +380,22 @@ plot.fig3.byCountry = function(df, countryname, WTP1=590, WTP2=3525, width=4, he
 }
 ```
 
+##### Plot
 ```{r fig3-by_country-plot}
+# Read in files
+path = getwd()
+zambia = read.csv(paste0(path, "/Figure3/long_df-Zambia.csv"))
+sa = read.csv(paste0(path, "/Figure3/long_df-SA.csv"))
+ssa = read.csv(paste0(path, "/Figure3/long_df-SSA.csv"))
+malawi = read.csv(paste0(path, "/Figure3/long_df-Malawi.csv"))
+
+# plots
 pzambia = plot.fig3.byCountry(df=zambia, countryname = "Zambia", WTP1=500, WTP2=750) 
 pmalawi = plot.fig3.byCountry(df=malawi, countryname = "Malawi", WTP1=500, WTP2=750) 
 pssa = plot.fig3.byCountry(df=ssa, countryname = "LMICs", WTP1=500, WTP2=750) 
 psa = plot.fig3.byCountry(df=sa, countryname = "SouthAfrica", WTP1=590, WTP2=3525) 
 
-# save file
+# save
 legend <- get_legend(plot.fig3.byCountry(df=zambia, countryname = "Zambia", legend_position="right"))
 grid.arrange(psa, pzambia ,pmalawi, pssa, legend, 
              layout_matrix=rbind(c(1,1,2,2,5), c(3,3,4,4,5)))
@@ -377,6 +403,85 @@ g <- arrangeGrob(psa, pzambia ,pmalawi, pssa, legend,
              layout_matrix=rbind(c(1,1,2,2,5), c(3,3,4,4,5)),
              top = textGrob("ICERs by time horizons", gp=gpar(fontsize=16,font=2)))
 ggsave(file=paste0("Figure3/", Sys.Date(), "-graph3-byCountry.png"), g, width = 8, height =6) #saves g
-
 ```
 
+# Figure 4: One way SA
+```{r setwd_library}
+rm(list=ls()) # clear the work space
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(gridExtra)
+library(grid)
+library(patchwork)
+```
+### Functions
+```{r func_oneway_SA}
+plot_sa = function(data, dsd_name, WTP1, WTP2, WTP_color, WTP_alpha, bar_width){
+  ggplot(data) +
+  geom_rect(aes(xmin = OutcomeRangeMin, xmax = PointEstimate,
+                ymin = as.numeric(factor(Scenario)) - bar_width, ymax = as.numeric(factor(Scenario)) + bar_width), fill="#00468B") +
+  geom_rect(aes(xmin = PointEstimate, xmax = OutcomeRangeMax,
+                ymin = as.numeric(factor(Scenario)) - bar_width, ymax = as.numeric(factor(Scenario)) + bar_width), fill="#ED2200") +
+  labs(title = dsd_name, x = "ICERs", y = "Scenarios") +
+  geom_vline(xintercept = data$PointEstimate, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = WTP1, linetype = "solid", color = WTP_color, alpha=WTP_alpha) +
+  geom_vline(xintercept = WTP2, linetype = "solid", color = WTP_color, alpha=WTP_alpha) +
+  theme(legend.position = "right", legend.title = element_blank()) +
+  theme_minimal() + theme_bw() +
+  theme(panel.grid = element_blank(), # change x or y grid, use panel.grid.major.x / panel.grid.minor.x
+        axis.title.y = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank(),
+        axis.line = element_line(color="black", size=0.4))
+}
+
+plot_one_way_sa = function(data, country_name, WTP1=500, WTP2=750, WTP_color="#cca259", WTP_alpha=0.7, bar_width=0.2){
+  cag = data %>% filter(DSD == "CAG") %>% mutate(Diff = abs(OutcomeRangeMax - OutcomeRangeMin))
+  cag$Scenario <- factor(cag$Scenario, levels = cag$Scenario[order(cag$Diff, decreasing = TRUE)]) # reorder
+  uag = data %>% filter(DSD == "UAG") %>% mutate(Diff = abs(OutcomeRangeMax - OutcomeRangeMin))
+  uag$Scenario <- factor(uag$Scenario, levels = uag$Scenario[order(uag$Diff, decreasing = TRUE)]) # reorder
+  home = data %>% filter(DSD == "HomeART") %>% mutate(Diff = abs(OutcomeRangeMax - OutcomeRangeMin))
+  home$Scenario <- factor(home$Scenario, levels = home$Scenario[order(home$Diff, decreasing = TRUE)]) # reorder
+
+  # plots
+  plot1 = ggplot(cag) +
+    geom_rect(aes(xmin = OutcomeRangeMin, xmax = PointEstimate,
+                  ymin = as.numeric(factor(Scenario)) - bar_width, ymax = as.numeric(factor(Scenario)) + bar_width), fill="#00468B") +
+    geom_rect(aes(xmin = PointEstimate, xmax = OutcomeRangeMax,
+                  ymin = as.numeric(factor(Scenario)) - bar_width, ymax = as.numeric(factor(Scenario)) + bar_width), fill="#ED2200") +
+    labs(title = paste0(country_name, ": CAG"), x = "ICERs", y = "Scenarios") +
+    geom_vline(xintercept = cag$PointEstimate, linetype = "dashed", color = "black") +
+    geom_vline(xintercept = WTP1, linetype = "solid", color = WTP_color, alpha=WTP_alpha) +
+    geom_vline(xintercept = WTP2, linetype = "solid", color = WTP_color, alpha=WTP_alpha) +
+    scale_y_continuous(breaks = as.numeric(factor(cag$Scenario)), labels = cag$Scenario) +
+    # scale_color_manual(values = c("#00468B","#ED2200"),labels = c("Low value","High value"))+
+    theme(legend.position = "right", legend.title = element_blank()) +
+    theme_minimal() + theme_bw() +
+    theme(panel.grid = element_blank(), # change x or y grid, use panel.grid.major.x / panel.grid.minor.x
+          axis.line = element_line(color="black", size=0.4))
+
+  plot2 = plot_sa(data=uag, dsd_name="UAG", WTP1=WTP1, WTP2=WTP2, WTP_color=WTP_color, WTP_alpha=WTP_alpha, bar_width=bar_width)
+  plot3 = plot_sa(data=home, dsd_name="HomeART", WTP1=WTP1, WTP2=WTP2, WTP_color=WTP_color, WTP_alpha=WTP_alpha, bar_width=bar_width)
+
+  combined_plots <- plot1 | plot2 | plot3 
+  g = combined_plots
+  return(g)
+  # ggsave(file=paste0(path, "/Figure4/", country_name, "OneWaySA", ".png"), g, width = 12, height = 3)
+}
+```
+
+### Plot
+```{r}
+path = getwd()
+
+malawi = read.csv(paste0(path, "/Figure4/SA_Malawi.csv"))
+pmalawi=plot_one_way_sa(data = malawi, country_name="Malawi",)
+zambia = read.csv(paste0(path, "/Figure4/SA_Zambia.csv"))
+pzambia=plot_one_way_sa(data = zambia, country_name="Zambia")
+sa = read.csv(paste0(path, "/Figure4/SA_SouthAfrica.csv"))
+psa=plot_one_way_sa(data = sa, country_name="SouthAfrica", WTP1 = 590, WTP2 = 3525)
+synthesis = read.csv(paste0(path, "/Figure4/SA_Synthesis.csv"))
+pssa=plot_one_way_sa(data = synthesis, country_name="LMICs")
+
+combined_fig = psa / pzambia / pmalawi /pssa
+ggsave(file=paste0("Figure4/", Sys.Date(), "-graph4-OneWaySA.png"), combined_fig, width=10, height=10) 
+```
